@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ka"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>სტატისტიკა</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root{--bg:#f7f5f0;--white:#fff;--ink:#1a1814;--muted:#9b9690;--border:#e4e0d8;--accent:#c8622a;--accent-l:#fdf0e8;--blue:#3a6b8a;--blue-l:#eaf2f7;--green:#3a7a5a;--green-l:#eaf5ef;--red:#b94040;--red-l:#fdf0ee}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-height:100vh}
+    .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 36px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+    .brand{font-family:'DM Serif Display',serif;font-size:18px}.brand span{color:var(--accent)}
+    .topbar-right{display:flex;align-items:center;gap:8px}
+    .tab-btn{padding:7px 15px;border:1px solid var(--border);border-radius:8px;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .18s}
+    .tab-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+    .tab-btn:hover:not(.active){border-color:var(--ink);color:var(--ink)}
+    .page{max-width:1100px;margin:0 auto;padding:36px 32px 64px}
+    .section{display:none}.section.active{display:block;animation:rise .4s ease both}
+    /* Dashboard */
+    .page-title{margin-bottom:10px;text-align:center}
+    .page-title h1{font-family:'DM Serif Display',serif;font-size:clamp(18px,2.2vw,24px);line-height:1.25;letter-spacing:-.02em;color:var(--ink);font-weight:700}
+    .page-title h1 em{font-style:italic;color:var(--accent)}
+    .page-title p{margin-top:7px;font-size:14px;color:var(--muted)}
+    .controls-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px}
+    .controls-grid{display:grid;grid-template-columns:1fr 3fr;grid-template-rows:auto auto;gap:10px 16px;align-items:end}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+    select{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:8px 28px 8px 10px;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239b9690' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .15s;min-width:130px}
+    #sub-sel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #prog-sel,#sub-sel{width:100%}
+    select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,107,138,.12)}
+    .metric-pills{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:3px;gap:3px}
+    .pill,.ctype-pill{padding:6px 13px;border:none;border-radius:6px;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .18s;white-space:nowrap}
+    .pill.ac,.ctype-pill.ac{background:var(--white);color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.09)}
+    .pill.aa,.ctype-pill.aa{background:var(--white);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.09)}
+    .chart-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:28px;position:relative;margin-bottom:10px}
+    .chart-top{display:flex;justify-content:center;align-items:flex-start;margin-bottom:10px;gap:14px;flex-wrap:wrap}
+    .chart-eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:4px}
+    .chart-name{font-family:'DM Serif Display',serif;font-size:17px;line-height:1.35;max-width:560px}
+    .chart-top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .mtag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0}
+    .mtag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+    .mtag.count{background:var(--blue-l);color:var(--blue)}.mtag.amount{background:var(--accent-l);color:var(--accent)}
+    .mode-toggle{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:2px;gap:2px}
+    .mode-btn{padding:4px 10px;border:none;border-radius:5px;background:transparent;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+    .mode-btn.active{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .chart-wrap{position:relative;height:320px}
+    .no-data{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:14px;gap:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+    .no-data.show{opacity:1;pointer-events:auto}
+    .chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+    .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+    .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+    /* Data table */
+    .data-table-card{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .data-table-head{padding:14px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .data-table-head h3{font-family:'DM Serif Display',serif;font-size:15px}
+    .data-table-head span{font-size:12px;color:var(--muted)}
+    .dt-scroll{overflow-x:auto}
+    .dt-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto}
+    .dt-table thead th{padding:6px 8px;background:var(--bg);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    .dt-table thead th.num{text-align:right;min-width:0}
+    .dt-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+    .dt-table tbody tr:last-child{border-bottom:none}
+    .dt-table tbody tr:hover{background:#faf9f6}
+    .dt-table tbody td{padding:6px 8px}
+    .dt-table tbody td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;padding:6px 8px}
+    .dt-table tfoot td{padding:6px 8px;background:var(--bg);border-top:2px solid var(--border);font-weight:700;font-size:11px}
+    .dt-table tfoot td.num{text-align:right;font-variant-numeric:tabular-nums}
+    .year-badge{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-size:12px;font-weight:700}
+    .loader{position:absolute;inset:0;background:rgba(255,255,255,.82);display:flex;align-items:center;justify-content:center;border-radius:14px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:10}
+    .loader.show{opacity:1;pointer-events:auto}
+    .spinner{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite}
+    /* Dashboard two-column layout */
+    .dash-layout{display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start}
+    .dash-sidebar{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px 20px;position:sticky;top:74px}
+    .dash-sidebar-eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px}
+    .dash-sidebar-text{font-size:13px;line-height:1.7;color:#3a3830}
+    .dash-main{min-width:0}
+    @media(max-width:800px){.dash-layout{grid-template-columns:1fr}.dash-sidebar{position:static}}
+    /* Admin */
+    .admin-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:16px;flex-wrap:wrap}
+    .admin-title h2{font-family:'DM Serif Display',serif;font-size:24px}
+    .admin-title p{font-size:13px;color:var(--muted);margin-top:4px}
+    .admin-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap}
+    .btn-primary{background:var(--ink);color:#fff}.btn-primary:hover{background:#2d2a26}
+    .btn-outline{background:var(--white);color:var(--ink);border:1px solid var(--border)}.btn-outline:hover{border-color:var(--ink)}
+    .btn-success{background:var(--green-l);color:var(--green);border:1px solid #b8dfc9}.btn-success:hover{background:#d4edd9}
+    .btn-blue{background:var(--blue-l);color:var(--blue);border:1px solid #b0ccdc}.btn-blue:hover{background:#d0e4ef}
+    .btn-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:5px 6px;border-radius:6px;transition:all .15s;font-size:14px;line-height:1}
+    .btn-del:hover{color:var(--red);background:var(--red-l)}
+    .mapping-card{background:var(--blue-l);border:1px solid #b0ccdc;border-radius:12px;padding:18px 20px;margin-bottom:20px;display:none}
+    .mapping-card.show{display:block}
+    .mapping-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:12px}
+    .mapping-grid{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+    .map-field{display:flex;flex-direction:column;gap:4px}
+    .map-field label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--blue)}
+    .map-field select{min-width:140px;background:var(--white);border-color:#b0ccdc;font-size:12px}
+    .info-box{background:var(--green-l);border:1px solid #b8dfc9;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:10px}
+    .info-box-icon{font-size:22px;flex-shrink:0}
+    .info-box h4{font-size:13px;font-weight:700;color:var(--green);margin-bottom:3px}
+    .info-box p{font-size:12px;color:#4a6b58}
+    /* Add row panel */
+    .add-row-panel{background:var(--white);border:1px solid #c8dce8;border-radius:14px;padding:20px 22px;margin-bottom:10px;display:none;flex-direction:column;gap:14px}
+    .add-row-panel.show{display:flex}
+    .add-row-panel-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--blue)}
+    .add-fields-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+    .add-f{display:flex;flex-direction:column;gap:3px}
+    .add-f label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--blue)}
+    .add-f input{padding:7px 9px;border:1px solid #c0d4e0;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;background:var(--white);transition:border-color .15s;min-width:90px}
+    .add-f input:focus{border-color:var(--blue)}
+    /* Editor table */
+    .editor-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+    .editor-toolbar{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--bg)}
+    .editor-count{font-size:12px;color:var(--muted);font-weight:600}
+    .search-wrap{display:flex;align-items:center;gap:6px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:6px 11px;width:200px}
+    .search-wrap input{border:none;background:transparent;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);width:100%}
+    .search-wrap input::placeholder{color:var(--muted)}
+    .ed-scroll{overflow-x:auto}
+    .ed-table{width:100%;border-collapse:collapse;font-size:13px}
+    .ed-table thead th{padding:8px 10px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    .ed-table tbody tr{border-bottom:1px solid var(--border)}
+    .ed-table tbody tr:last-child{border-bottom:none}
+    .ed-table tbody tr:hover{background:#faf9f6}
+    .ed-table tbody td{padding:4px 6px;vertical-align:middle}
+    .cell-in{border:1px solid transparent;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);width:100%;padding:5px 7px;border-radius:5px;outline:none;transition:all .15s;min-width:80px}
+    .cell-in:focus{background:var(--white);border-color:var(--blue);box-shadow:0 0 0 2px rgba(58,107,138,.12)}
+    .cell-in.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:999}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:900px){
+      .page{padding:20px 16px 48px}
+      .controls-grid{grid-template-columns:1fr 2fr}
+    }
+    @media(max-width:700px){
+      .topbar{padding:0 12px}
+      .brand{font-size:14px}
+      .page{padding:16px 10px 40px}
+      .controls-grid{grid-template-columns:1fr;grid-template-rows:auto}
+      .field[style*="grid-column:2"]{grid-column:1!important}
+      .field[style*="justify-self:end"]{justify-self:start!important}
+      .chart-wrap{height:260px!important}
+      .chart-card{padding:16px}
+      .controls-card{padding:12px 14px}
+      .dt-table{font-size:10px}
+      .dt-table thead th,.dt-table tbody td{padding:4px 5px}
+      .page-title h1{font-size:17px}
+    }
+    @media(max-width:480px){
+      .metric-pills{flex-wrap:wrap}
+      .pill,.ctype-pill{padding:5px 9px;font-size:11px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">მონაცემების<span> </span>კონსტრუქტორი</div>
+  <div class="topbar-right">
+    <button class="tab-btn" id="btn-dash" onclick="switchTab('dashboard')">📊 დიაგრამა</button>
+    <!--ADMIN_BTN--><!--/ADMIN_BTN-->
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="section">
+    <div class="page-title">
+      <div style="font-size:22px;font-weight:500;color:var(--muted);letter-spacing:.03em;margin-bottom:6px">ჯანდაცვისა და სოციალური მომსახურების საქალაქო სამსახური</div>
+      <h3>ძირითადი სტატისტიკური მაჩვენებლები ჯანმრთელობის დაცვისა და სოციალური მომსახურების პროგრამების შესახებ</h3>
+    </div>
+
+    <div class="dash-main">
+
+    <div class="info-card" style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px">პროგრამების შესახებ</div>
+      <p style="font-size:13px;line-height:1.7;color:#3a3830">სამსახური წლების განმავლობაში ახორციელებს ჯანმრთელობის დაცვისა და სოციალური უზრუნველყოფის მუნიციპალურ პროგრამებს. ამ გვერდზე შეგიძლიათ იხილოთ სამსახურის მიერ ადმინისტრირებადი პროგრამებისა და ქვეპროგრამების შესახებ ძირითადი სტატისტიკური მაჩვენებელი წლების მიხედვით.</p>
+    </div>
+
+    <div class="controls-card">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px">მონაცემთა გენერირება</div>
+      <div class="controls-grid">
+        <!-- row 1: filter_1 | filter_2 -->
+        <div class="field" style="grid-column:1">
+          <label>ფილტრი_1</label>
+          <select id="prog-sel"><option value="1. ზოგადი მაჩვენებლები">1. ზოგადი მაჩვენებლები</option><option value="2. ჯანდაცვის პროგრამები">2. ჯანდაცვის პროგრამები</option><option value="3. სოციალური პროგრამები">3. სოციალური პროგრამები</option></select>
+        </div>
+        <div class="field" style="grid-column:2">
+          <label>ფილტრი_2</label>
+          <select id="sub-sel"><option value="1.1 ბიუჯეტი">1.1 ბიუჯეტი</option><option value="1.2 შესრულება">1.2 შესრულება</option><option value="1.3 მოსახლეობა (თბილისი)">1.3 მოსახლეობა (თბილისი)</option><option value="1.3 მოსახლეობა (საქართველო)">1.3 მოსახლეობა (საქართველო)</option><option value="1.4 სხვა">1.4 სხვა</option></select>
+        </div>
+        <!-- row 2: მაჩვენებელი | დიაგრამის ტიპი -->
+        <div class="field" style="grid-column:1">
+          <label>მაჩვენებელი</label>
+          <div class="metric-pills">
+            <button class="pill ac" data-m="request count">შემთხვევათა რაოდ.</button>
+            <button class="pill" data-m="beneficiary count">ბენეფიციარი</button>
+            <button class="pill" data-m="amount">თანხა</button>
+          </div>
+        </div>
+        <div class="field" style="grid-column:2;justify-self:end">
+          <label>დიაგრამის ტიპი</label>
+          <div class="metric-pills">
+            <button class="ctype-pill ac" id="ctype-bar" onclick="setChartType('bar')">სვეტოვანი</button>
+            <button class="ctype-pill" id="ctype-line" onclick="setChartType('line')">ხაზოვანი</button>
+            <button class="ctype-pill" id="ctype-pie" onclick="setChartType('pie')">წრიული</button>
+          </div>
+        </div>
+        <div id="extra-filters" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="loader" id="loader"><div class="spinner"></div></div>
+      <div class="chart-top">
+        <div>
+          <div class="chart-name" id="chart-name" style="text-align:center;width:100%">1.1 ბიუჯეტი</div>
+        </div>
+        <div class="chart-top-right">
+
+          <div class="mode-toggle" id="stack-toggle" style="display: none;">
+            <button class="mode-btn active" data-mode="stacked">Stacked</button>
+            <button class="mode-btn" data-mode="grouped">Grouped</button>
+          </div>
+
+        </div>
+      </div>
+      <div class="chart-wrap" style="height: 320px;">
+        <canvas id="main-chart" style="box-sizing: border-box; display: block; height: 320px; width: 978px;" width="1223" height="400"></canvas>
+        <div class="no-data" id="no-data"><div style="font-size:28px;opacity:.4">🔍</div><span>მონაცემები ვერ მოიძებნა</span></div>
+      </div>
+      <div id="chart-legend" class="chart-legend" style="display: none;"><div class="legend-item"><div class="legend-dot" style="background:#3a6b8a"></div><span>undefined</span></div></div>
+    </div>
+
+    <div class="data-table-card">
+      <div class="data-table-head">
+        <h3>მონაცემთა ცხრილი</h3>
+        <span id="table-sub-label">1.1 ბიუჯეტი</span>
+      </div>
+      <div class="dt-scroll"><table class="dt-table"><thead id="dt-head"><tr><th style="min-width:110px">ველი</th><th class="num">2015</th><th class="num">2016</th><th class="num">2017</th><th class="num">2018</th><th class="num">2019</th><th class="num">2020</th><th class="num">2021</th><th class="num">2022</th><th class="num">2023</th><th class="num">2024</th><th class="num">2025</th></tr></thead><tbody id="dt-body"><tr><td style="font-weight:600">შემთხვევათა რაოდენობა</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr></tbody><tfoot id="dt-foot"></tfoot></table></div>
+    </div><!-- data-table-card -->
+      </div><!-- dash-main -->
+    </div><!-- dash-layout -->
+  </div><!-- tab-dashboard -->
+
+  <!-- ADMIN -->
+  <!--ADMIN_START--><!--ADMIN_END-->
+
+
+<div class="toast" id="toast">✓ 462 სტრიქონი შემოტანილია</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────
+// The textarea below is the single source of truth for saving.
+// On load we read from it; on save we write to it in the exported HTML.
+</script>
+<textarea id="data-store" style="display:none">[{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2015,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2016,"beneficiary count":"","request count":"","amount":70361600},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2017,"beneficiary count":"","request count":"","amount":54822700},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2018,"beneficiary count":"","request count":"","amount":56158300},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2019,"beneficiary count":"","request count":"","amount":58286800},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2020,"beneficiary count":"","request count":"","amount":60340600},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2021,"beneficiary count":"","request count":"","amount":65468600},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2022,"beneficiary count":"","request count":"","amount":82663400},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2023,"beneficiary count":"","request count":"","amount":86157600},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2024,"beneficiary count":"","request count":"","amount":96055000},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.1 ბიუჯეტი","year":2025,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2015,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2016,"beneficiary count":"","request count":"","amount":70158400},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2017,"beneficiary count":"","request count":"","amount":54608900},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2018,"beneficiary count":"","request count":"","amount":55923200},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2019,"beneficiary count":"","request count":"","amount":57988100},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2020,"beneficiary count":"","request count":"","amount":58043600},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2021,"beneficiary count":"","request count":"","amount":65125800},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2022,"beneficiary count":"","request count":"","amount":81304100},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2023,"beneficiary count":"","request count":"","amount":83402700},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2024,"beneficiary count":"","request count":"","amount":95597000},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.2 შესრულება","year":2025,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2015,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2016,"beneficiary count":1132000,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2017,"beneficiary count":1145500,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2018,"beneficiary count":1158700,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2019,"beneficiary count":1171100,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2020,"beneficiary count":1184800,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2021,"beneficiary count":1202700,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2022,"beneficiary count":1201800,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2023,"beneficiary count":1241700,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2024,"beneficiary count":1258500,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (თბილისი)","year":2025,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2015,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2016,"beneficiary count":3728600,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2017,"beneficiary count":3726400,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2018,"beneficiary count":3729600,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2019,"beneficiary count":3723500,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2020,"beneficiary count":3716900,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2021,"beneficiary count":3728600,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2022,"beneficiary count":3688600,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2023,"beneficiary count":3736400,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2024,"beneficiary count":3694600,"request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.3 მოსახლეობა (საქართველო)","year":2025,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2015,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2016,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2017,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2018,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2019,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2020,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2021,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2022,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2023,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2024,"beneficiary count":"","request count":"","amount":""},{"filter_1":"1. ზოგადი მაჩვენებლები","filter_2":"1.4 სხვა","year":2025,"beneficiary count":"","request count":"","amount":""},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2015,"beneficiary count":39197,"request count":58796,"amount":964600},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2016,"beneficiary count":64184,"request count":96276,"amount":1148400},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2017,"beneficiary count":37714,"request count":56571,"amount":673815},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2018,"beneficiary count":68566,"request count":102849,"amount":2822100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2019,"beneficiary count":88995,"request count":133493,"amount":2301200},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2020,"beneficiary count":66847,"request count":100271,"amount":1862000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2021,"beneficiary count":88650,"request count":132975,"amount":2206900},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2022,"beneficiary count":91228,"request count":136842,"amount":3100000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2023,"beneficiary count":105843,"request count":158765,"amount":2640000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2024,"beneficiary count":98747,"request count":148121,"amount":3054814},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 02 - დაავადებათა სკრინინგი","year":2025,"beneficiary count":107042,"request count":160563,"amount":3536120},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2015,"beneficiary count":19441,"request count":29162,"amount":460000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2016,"beneficiary count":56620,"request count":84930,"amount":439900},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2017,"beneficiary count":122443,"request count":183665,"amount":508282.78},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2018,"beneficiary count":125049,"request count":187574,"amount":511700},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2019,"beneficiary count":128459,"request count":192689,"amount":509800},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2020,"beneficiary count":88069,"request count":132104,"amount":530400},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2021,"beneficiary count":81695,"request count":122543,"amount":561500},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2022,"beneficiary count":93748,"request count":140622,"amount":583500},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2023,"beneficiary count":97917,"request count":146876,"amount":637600},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2024,"beneficiary count":122162,"request count":183243,"amount":737478.94},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 03 - გადამდებ და არაგადამდებ დაავადებათა ეპიდემიოლოგიური კონტროლი","year":2025,"beneficiary count":149193,"request count":223790,"amount":810349.84},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2016,"beneficiary count":17409,"request count":26114,"amount":330800},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - ორთოპედიულ დაავადებათა სკრინინგი და აღდგენითი თერაპია","year":2025,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2023,"beneficiary count":85,"request count":128,"amount":495200},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2024,"beneficiary count":445,"request count":668,"amount":2769513.73},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 04 - სახსრების ენდოპროთეზირების დაფინანსება","year":2025,"beneficiary count":334,"request count":501,"amount":1986733.76},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2020,"beneficiary count":66,"request count":99,"amount":717600},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2021,"beneficiary count":76,"request count":114,"amount":1174800},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2022,"beneficiary count":111,"request count":167,"amount":1597500},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2023,"beneficiary count":155,"request count":233,"amount":2483300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2024,"beneficiary count":232,"request count":348,"amount":4216045},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 05 - გაფანტული სკლეროზის სამკურნალო მედიკამენტებისა და კვლევების დაფინანსება","year":2025,"beneficiary count":290,"request count":435,"amount":5386371},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2015,"beneficiary count":325,"request count":488,"amount":585100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2016,"beneficiary count":566,"request count":849,"amount":1799100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2017,"beneficiary count":700,"request count":1050,"amount":2751431},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2018,"beneficiary count":928,"request count":1392,"amount":3368300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2019,"beneficiary count":1048,"request count":1572,"amount":3962300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2020,"beneficiary count":1256,"request count":1884,"amount":4792900},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2021,"beneficiary count":1434,"request count":2151,"amount":6049100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2022,"beneficiary count":1637,"request count":2456,"amount":6896800},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2023,"beneficiary count":1940,"request count":2910,"amount":8905300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2024,"beneficiary count":2180,"request count":3270,"amount":10862270},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 06 - აუტიზმის სპექტრის დარღვევის მქონე ბავშვთა აბილიტაცია","year":2025,"beneficiary count":2489,"request count":3734,"amount":12257950.5},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2016,"beneficiary count":76,"request count":114,"amount":1316700},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2017,"beneficiary count":156,"request count":234,"amount":3232663.16},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2018,"beneficiary count":164,"request count":246,"amount":3782900},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2019,"beneficiary count":157,"request count":236,"amount":2899200},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2020,"beneficiary count":172,"request count":258,"amount":3693500},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2021,"beneficiary count":226,"request count":339,"amount":5049000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2022,"beneficiary count":269,"request count":404,"amount":6265100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2023,"beneficiary count":273,"request count":410,"amount":5243800},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2024,"beneficiary count":317,"request count":476,"amount":7565070.2},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 07 - ძუძუს კიბოს სამკურნალო მედიკამენტების დაფინანსება","year":2025,"beneficiary count":319,"request count":479,"amount":7552651.45},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2016,"beneficiary count":87,"request count":131,"amount":109000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2017,"beneficiary count":354,"request count":531,"amount":367452.64},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2018,"beneficiary count":445,"request count":668,"amount":482400},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2019,"beneficiary count":431,"request count":647,"amount":522600},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2020,"beneficiary count":479,"request count":719,"amount":587000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2021,"beneficiary count":526,"request count":789,"amount":619300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2022,"beneficiary count":540,"request count":810,"amount":701300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2023,"beneficiary count":556,"request count":834,"amount":755800},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2024,"beneficiary count":674,"request count":1011,"amount":896916.73},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 08 - ფსიქიკური ჯანმრთელობის სათემო მომსახურება","year":2025,"beneficiary count":688,"request count":1032,"amount":919742.71},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2015,"beneficiary count":335,"request count":503,"amount":323600},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2016,"beneficiary count":341,"request count":512,"amount":316300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2017,"beneficiary count":302,"request count":453,"amount":196730.22},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 09 - ნარკომანიის ჩანაცვლებითი თერაპია","year":2025,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 10 - რევმატოიდული ართრიტის სამკურნალო მედიკამენტების დაფინანსება","year":2025,"beneficiary count":52,"request count":78,"amount":201588},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2015,"beneficiary count":16106,"request count":24159,"amount":796200},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2016,"beneficiary count":17392,"request count":26088,"amount":2360500},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2017,"beneficiary count":19203,"request count":28805,"amount":2614968.16},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2018,"beneficiary count":3649,"request count":5474,"amount":481900},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2019,"beneficiary count":464,"request count":696,"amount":23300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 12 - c ჰეპატიტის დიაგნოსტიკის პროგრამა","year":2025,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2015,"beneficiary count":11,"request count":17,"amount":1746000},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2016,"beneficiary count":35,"request count":53,"amount":3939300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2017,"beneficiary count":48,"request count":72,"amount":4649990.72},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2018,"beneficiary count":70,"request count":105,"amount":6951300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2019,"beneficiary count":70,"request count":105,"amount":7605400},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2020,"beneficiary count":80,"request count":120,"amount":9374300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2021,"beneficiary count":78,"request count":117,"amount":8943300},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2022,"beneficiary count":75,"request count":113,"amount":8208100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2023,"beneficiary count":69,"request count":104,"amount":8674100},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2024,"beneficiary count":203,"request count":305,"amount":8842675.46},{"filter_1":"2. ჯანდაცვის პროგრამები","filter_2":"06 01 13 - ტრანსპლანტაცია","year":2025,"beneficiary count":440,"request count":660,"amount":11306471.35},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2015,"beneficiary count":null,"request count":null,"amount":46992000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2016,"beneficiary count":null,"request count":null,"amount":25624821.89},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2017,"beneficiary count":181232,"request count":271848,"amount":7324596.77},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2018,"beneficiary count":153952,"request count":230928,"amount":7338770.25},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2019,"beneficiary count":157988,"request count":236982,"amount":8027892.08},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2020,"beneficiary count":147917,"request count":221876,"amount":6591000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2021,"beneficiary count":171054,"request count":256581,"amount":6245000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2022,"beneficiary count":192276,"request count":288414,"amount":9510733.71},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2023,"beneficiary count":206744,"request count":310116,"amount":9875430.23},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2024,"beneficiary count":199955,"request count":299933,"amount":9871488.04},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 01 - კომუნალური სუბსიდირება","year":2025,"beneficiary count":217844,"request count":326766,"amount":10328200},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2015,"beneficiary count":15023.857142857143,"request count":22536,"amount":7045000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2016,"beneficiary count":16722.85714285714,"request count":25084,"amount":7724100},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2017,"beneficiary count":17034,"request count":25551,"amount":8259700.000000001},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2018,"beneficiary count":17387,"request count":26081,"amount":8701650},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2019,"beneficiary count":18388,"request count":27582,"amount":9452950},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2020,"beneficiary count":19196,"request count":28794,"amount":10226000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2021,"beneficiary count":22649,"request count":33974,"amount":11318000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2022,"beneficiary count":22148,"request count":33222,"amount":11938700},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2023,"beneficiary count":22910,"request count":34365,"amount":12043700},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2024,"beneficiary count":22849,"request count":34274,"amount":12172250},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 02 - სოციალურად დაუცველი მრავალშვილიანი ოჯახებისათვის 18 წლამდე ასაკის თითოეულ ბავშვზე ყოველთვიური დახმარება","year":2025,"beneficiary count":22905,"request count":34358,"amount":12553000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2022,"beneficiary count":3,"request count":5,"amount":3000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2023,"beneficiary count":5,"request count":8,"amount":13000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2024,"beneficiary count":7,"request count":11,"amount":22500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - მცირე საოჯახო ტიპის სახლებიდან გასული, სრულწლოვანი პირების დამოუკიდებელი ცხოვრების ხელშეწყობა","year":2025,"beneficiary count":5,"request count":8,"amount":25000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2015,"beneficiary count":405,"request count":608,"amount":392000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2016,"beneficiary count":417,"request count":626,"amount":408800},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2017,"beneficiary count":447,"request count":671,"amount":428400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2018,"beneficiary count":425,"request count":638,"amount":411400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 03 - სოციალურად დაუცველი ოჯახებისათვის მე-3, მე-4 და მეტი შვილის დაბადებისათვის ერთჯერადი მატერიალური დახმარება","year":2025,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2015,"beneficiary count":null,"request count":null,"amount":788400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2016,"beneficiary count":null,"request count":null,"amount":896101.2},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2017,"beneficiary count":2500,"request count":3750,"amount":750000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2024,"beneficiary count":null,"request count":null,"amount":0},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - ბავშვების (10-16 წელი) კულტურულ-გამაჯანსაღებელი საზაფხულო ბანაკები","year":2025,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2015,"beneficiary count":1650,"request count":2475,"amount":607000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2016,"beneficiary count":1800,"request count":2700,"amount":719595},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2017,"beneficiary count":1800,"request count":2700,"amount":759519.7},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2018,"beneficiary count":1003,"request count":1505,"amount":717070.5},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2019,"beneficiary count":1387,"request count":2081,"amount":985785.11},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2020,"beneficiary count":1353,"request count":2030,"amount":1082000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2021,"beneficiary count":1635,"request count":2453,"amount":1308000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2022,"beneficiary count":2028,"request count":3042,"amount":1639412.68},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2023,"beneficiary count":2135,"request count":3203,"amount":1730624.4},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2024,"beneficiary count":2716,"request count":4074,"amount":2199388.2},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 04 - შეზღუდული შესაძლებლობების მქონე ბავშვთა და მოზარდთა საკურორტო მომსახურება","year":2025,"beneficiary count":2875,"request count":4313,"amount":2325600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2015,"beneficiary count":41,"request count":62,"amount":41000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2016,"beneficiary count":43,"request count":65,"amount":43000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2017,"beneficiary count":23,"request count":35,"amount":23000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2018,"beneficiary count":28,"request count":42,"amount":27000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2019,"beneficiary count":33,"request count":50,"amount":33000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2020,"beneficiary count":38,"request count":57,"amount":38000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2021,"beneficiary count":46,"request count":69,"amount":46000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2022,"beneficiary count":47,"request count":71,"amount":47000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2023,"beneficiary count":54,"request count":81,"amount":56000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2024,"beneficiary count":57,"request count":86,"amount":59000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 05 - 100 წელს მიღწეულ მოქალაქეთათვის ერთჯერადი დახმარება","year":2025,"beneficiary count":81,"request count":122,"amount":810000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2015,"beneficiary count":1746,"request count":2619,"amount":501330},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2016,"beneficiary count":3014,"request count":4521,"amount":580400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2017,"beneficiary count":2926,"request count":4389,"amount":592640},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2018,"beneficiary count":2982,"request count":4473,"amount":602360},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2019,"beneficiary count":3071,"request count":4607,"amount":582785},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2020,"beneficiary count":2631,"request count":3947,"amount":556000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2021,"beneficiary count":2513,"request count":3770,"amount":532000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2022,"beneficiary count":2842,"request count":4263,"amount":578835},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2023,"beneficiary count":2867,"request count":4301,"amount":564600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2024,"beneficiary count":2874,"request count":4311,"amount":746220},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 01 - უფასო სწავლება მოსწავლე ახალგაზრდობის სახლებში და სასახლეში","year":2025,"beneficiary count":2814,"request count":4221,"amount":745700},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2015,"beneficiary count":2373,"request count":3560,"amount":872443},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2016,"beneficiary count":3488,"request count":5232,"amount":932492.5},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2017,"beneficiary count":3436,"request count":5154,"amount":949447.5},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2018,"beneficiary count":3460,"request count":5190,"amount":972175},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2019,"beneficiary count":3416,"request count":5124,"amount":974515},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2020,"beneficiary count":2987,"request count":4481,"amount":986000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2021,"beneficiary count":3108,"request count":4662,"amount":997000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2022,"beneficiary count":3382,"request count":5073,"amount":1002755},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2023,"beneficiary count":3306,"request count":4959,"amount":999460},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2024,"beneficiary count":3211,"request count":4817,"amount":1004825},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 02 - უფასო სწავლება ხელოვნების სკოლებში","year":2025,"beneficiary count":3113,"request count":4670,"amount":1003500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2015,"beneficiary count":2994,"request count":4491,"amount":592995},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2016,"beneficiary count":3819,"request count":5729,"amount":695407.26},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2017,"beneficiary count":3872,"request count":5808,"amount":731524.32},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2018,"beneficiary count":4018,"request count":6027,"amount":727058.7},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2019,"beneficiary count":4045,"request count":6068,"amount":713049.31},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2020,"beneficiary count":2335,"request count":3503,"amount":401000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2021,"beneficiary count":3077,"request count":4616,"amount":512000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2022,"beneficiary count":4185,"request count":6278,"amount":623745.47},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2023,"beneficiary count":4253,"request count":6380,"amount":608510.67},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2024,"beneficiary count":3622,"request count":5433,"amount":586634.17},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 03 - უფასო სწავლება სპორტულ სკოლებში და საცურაო აუზებში","year":2025,"beneficiary count":3515,"request count":5273,"amount":659000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2015,"beneficiary count":null,"request count":null,"amount":204765},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2016,"beneficiary count":42916,"request count":64374,"amount":203035.3},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2017,"beneficiary count":24677,"request count":37016,"amount":134889.86},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2018,"beneficiary count":30653,"request count":45980,"amount":104245.82},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2019,"beneficiary count":31208,"request count":46812,"amount":221993.52},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2020,"beneficiary count":5065,"request count":7598,"amount":78000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2021,"beneficiary count":26829,"request count":40244,"amount":122000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2022,"beneficiary count":53910,"request count":80865,"amount":210935.59},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2023,"beneficiary count":43946,"request count":65919,"amount":209874.05},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2024,"beneficiary count":43500,"request count":65250,"amount":182007.01},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 06 04 - სერვის ცენტრებში ბარათების დამზადება (ინიციალიზაცია)","year":2025,"beneficiary count":39082,"request count":58623,"amount":208800},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2022,"beneficiary count":21033,"request count":31550,"amount":8842176.09},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2023,"beneficiary count":18932,"request count":28398,"amount":8173617.54},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2024,"beneficiary count":18478,"request count":27717,"amount":8548374.44},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - სოციალურად დაუცველი, საპენსიო ასაკის პირებისათვის მედიკამენტების დაფინანსება","year":2025,"beneficiary count":18801,"request count":28202,"amount":8831400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2022,"beneficiary count":21033,"request count":31550,"amount":8842176.09},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2023,"beneficiary count":18932,"request count":28398,"amount":8173617.54},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2024,"beneficiary count":18478,"request count":27717,"amount":8548374.44},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 08 - ყრუ ინვალიდთათვის თარჯიმან-დაქტილოლოგების მომსახურებით უზრუნველყოფა","year":2025,"beneficiary count":18801,"request count":28202,"amount":8831400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2015,"beneficiary count":24517,"request count":36776,"amount":16596000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2016,"beneficiary count":39418,"request count":59127,"amount":15450217.3},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2017,"beneficiary count":35536,"request count":53304,"amount":14463834.46},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2018,"beneficiary count":13457,"request count":20186,"amount":12719821.72},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2019,"beneficiary count":11776,"request count":17664,"amount":13906705.19},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2020,"beneficiary count":10311,"request count":15467,"amount":11151000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2021,"beneficiary count":11598,"request count":17397,"amount":13996000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2022,"beneficiary count":11606,"request count":17409,"amount":13536034},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2023,"beneficiary count":9611,"request count":14417,"amount":12964223.28},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2024,"beneficiary count":9880,"request count":14820,"amount":13727971.06},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 09 - სამედიცინო და სხვა სოციალური საჭიროებების დახმარების ღონისძიებების პროგრამა","year":2025,"beneficiary count":10441,"request count":15662,"amount":17179600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2015,"beneficiary count":665,"request count":998,"amount":636000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2016,"beneficiary count":491,"request count":737,"amount":268500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2017,"beneficiary count":403,"request count":605,"amount":218700},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2018,"beneficiary count":292,"request count":438,"amount":154800},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2019,"beneficiary count":250,"request count":375,"amount":132000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2020,"beneficiary count":200,"request count":300,"amount":105000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2021,"beneficiary count":167,"request count":251,"amount":141000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2022,"beneficiary count":130,"request count":195,"amount":107000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2023,"beneficiary count":86,"request count":129,"amount":66500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2024,"beneficiary count":70,"request count":105,"amount":107000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 10 - ომის ვეტერანების დახმარება","year":2025,"beneficiary count":52,"request count":78,"amount":78000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2015,"beneficiary count":null,"request count":null,"amount":2000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2016,"beneficiary count":null,"request count":null,"amount":1817.7},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2017,"beneficiary count":145,"request count":218,"amount":2068.31},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2018,"beneficiary count":145,"request count":218,"amount":3599.95},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2019,"beneficiary count":145,"request count":218,"amount":1723.63},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2020,"beneficiary count":145,"request count":218,"amount":1000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2021,"beneficiary count":145,"request count":218,"amount":1000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2022,"beneficiary count":145,"request count":218,"amount":596.2},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2023,"beneficiary count":145,"request count":218,"amount":1869.48},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2024,"beneficiary count":145,"request count":218,"amount":2368.12},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 13 - მარტოხელა ხანდაზმულთა დღის ცენტრის ხელშეწყობა","year":2025,"beneficiary count":145,"request count":218,"amount":2700},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2018,"beneficiary count":41551,"request count":62327,"amount":131257.99},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 14 16 - უფასო სასადილოების ბენეფიციართა რეგისტრაციისა და აღრიცხვის უზრუნველყოფა","year":2025,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2015,"beneficiary count":190,"request count":285,"amount":716300},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2016,"beneficiary count":32,"request count":48,"amount":1060470.08},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2017,"beneficiary count":197,"request count":296,"amount":1337490.44},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2018,"beneficiary count":481,"request count":722,"amount":1262383.17},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2019,"beneficiary count":600,"request count":900,"amount":1222158.35},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2020,"beneficiary count":625,"request count":938,"amount":1235000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2021,"beneficiary count":599,"request count":899,"amount":1224000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2022,"beneficiary count":650,"request count":975,"amount":1410373.63},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2023,"beneficiary count":519,"request count":779,"amount":1644218.64},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2024,"beneficiary count":1222,"request count":1833,"amount":2316088},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 21 - თბილისის მუნიციპალური თავშესაფრის მოვლა-პატრონობა","year":2025,"beneficiary count":1519,"request count":2279,"amount":3017500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2015,"beneficiary count":1933,"request count":2900,"amount":719000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2016,"beneficiary count":1075,"request count":1613,"amount":739600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2017,"beneficiary count":1001,"request count":1502,"amount":607600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2018,"beneficiary count":974,"request count":1461,"amount":788400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2019,"beneficiary count":1043,"request count":1565,"amount":770000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2020,"beneficiary count":1133,"request count":1700,"amount":872000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2021,"beneficiary count":1286,"request count":1929,"amount":966000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2022,"beneficiary count":1474,"request count":2211,"amount":1098400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2023,"beneficiary count":1757,"request count":2636,"amount":1321600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2024,"beneficiary count":1955,"request count":2933,"amount":1500400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 22 - სოციალურად დაუცველი 18 წლამდე შეზღუდული შესაძლებლობის მქონე პირების დახმარება","year":2025,"beneficiary count":2131,"request count":3197,"amount":1709600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2015,"beneficiary count":25,"request count":38,"amount":75800},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2016,"beneficiary count":25,"request count":38,"amount":75790},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2017,"beneficiary count":46,"request count":69,"amount":75790},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2018,"beneficiary count":50,"request count":75,"amount":75790},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2019,"beneficiary count":42,"request count":63,"amount":75790},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2020,"beneficiary count":34,"request count":51,"amount":75790},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2021,"beneficiary count":42,"request count":63,"amount":82000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2022,"beneficiary count":49,"request count":74,"amount":84670},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2023,"beneficiary count":54,"request count":81,"amount":84670},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2024,"beneficiary count":29,"request count":44,"amount":60440},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 23 - \"ვორლდ ვიჟენ საქართველოს\" სოციალურად დაუცველი ბავშვების დღის ცენტრის თანადაფინანსება","year":2025,"beneficiary count":38,"request count":57,"amount":77400},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2015,"beneficiary count":862,"request count":1293,"amount":714000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2016,"beneficiary count":812,"request count":1218,"amount":660000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2017,"beneficiary count":668,"request count":1002,"amount":542700},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2018,"beneficiary count":628,"request count":942,"amount":549600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2019,"beneficiary count":626,"request count":939,"amount":535500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2020,"beneficiary count":611,"request count":917,"amount":534000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2021,"beneficiary count":624,"request count":936,"amount":539000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2022,"beneficiary count":614,"request count":921,"amount":538500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2023,"beneficiary count":604,"request count":906,"amount":531600},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2024,"beneficiary count":593,"request count":890,"amount":516900},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 24 - სოციალურად დაუცველი მკვეთრად შეზღუდული შესაძლებლობების მქონე უსინათლო პირების დახმარება","year":2025,"beneficiary count":559,"request count":839,"amount":490500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2015,"beneficiary count":880,"request count":1320,"amount":440000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2016,"beneficiary count":1087,"request count":1631,"amount":543500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2017,"beneficiary count":808,"request count":1212,"amount":404000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2018,"beneficiary count":697,"request count":1046,"amount":348500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2019,"beneficiary count":648,"request count":972,"amount":475500},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2020,"beneficiary count":780,"request count":1170,"amount":574000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2021,"beneficiary count":781,"request count":1172,"amount":596000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2022,"beneficiary count":832,"request count":1248,"amount":617100},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2023,"beneficiary count":754,"request count":1131,"amount":570800},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2024,"beneficiary count":799,"request count":1199,"amount":588200},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 25 - სოციალურად დაუცველ ოჯახებში ყველა ახალშობილზე ერთჯერადი დახმარება","year":2025,"beneficiary count":713,"request count":1070,"amount":545000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2015,"beneficiary count":841,"request count":1262,"amount":131000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2016,"beneficiary count":692,"request count":1038,"amount":277661.79},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2017,"beneficiary count":848,"request count":1272,"amount":379421.9},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2018,"beneficiary count":774,"request count":1161,"amount":392434.95},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2019,"beneficiary count":846,"request count":1269,"amount":423460.62},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2020,"beneficiary count":780,"request count":1170,"amount":379000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2021,"beneficiary count":763,"request count":1145,"amount":370000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2022,"beneficiary count":761,"request count":1142,"amount":368403.93},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2023,"beneficiary count":762,"request count":1143,"amount":362988.4},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2024,"beneficiary count":874,"request count":1311,"amount":403577.81999999995},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 26 - შინმოვლის თანადაფინანსება","year":2025,"beneficiary count":805,"request count":1208,"amount":370000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2015,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2016,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2017,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2018,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2019,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2020,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2021,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2022,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2023,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2024,"beneficiary count":null,"request count":null,"amount":null},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 27 - პერსონალური ასისტენტის მომსახურებით უზრუნველყოფის ქვეპროგრამა","year":2025,"beneficiary count":305,"request count":458,"amount":1319200},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2015,"beneficiary count":53,"request count":80,"amount":301000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2016,"beneficiary count":63,"request count":95,"amount":279175.98},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2017,"beneficiary count":69,"request count":104,"amount":879211.75},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2018,"beneficiary count":66,"request count":99,"amount":837481.71},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2019,"beneficiary count":74,"request count":111,"amount":868264.33},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2020,"beneficiary count":108,"request count":162,"amount":912000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2021,"beneficiary count":99,"request count":149,"amount":779000},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2022,"beneficiary count":87,"request count":131,"amount":954155},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2023,"beneficiary count":81,"request count":122,"amount":827660.79},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2024,"beneficiary count":97,"request count":146,"amount":977575.14},{"filter_1":"3. სოციალური პროგრამები","filter_2":"06 02 28 - შეზღუდული შესაძლებლობების მქონე პირთა საზოგადოებაში ინტეგრაციის ხელშეწყობის პროგრამა","year":2025,"beneficiary count":79,"request count":119,"amount":961400}]</textarea>
+
+<script>
+const REQUIRED = ['filter_1','filter_2','year','beneficiary count','request count','amount'];
+const NUM_COLS = ['year','beneficiary count','request count','amount'];
+const PALETTE   = ['#3a6b8a','#c8622a','#3a7a5a','#7a5a3a','#6a3a8a','#3a8a6a','#8a3a5a','#5a8a3a'];
+
+let DATA       = [];
+let EXTRA_COLS = [];
+let curProg    = '', curSub = '', curMetric = 'request count';
+let curChartType = 'bar', curMode = 'stacked', curGroupBy = '';
+let chart      = null;
+let pendingRaw = [], pendingCols = [];
+
+// ── Load from textarea on startup ────────────────────────────
+(function(){
+  try{
+    const ta = document.getElementById('data-store');
+    if(ta && ta.value.trim()){
+      const parsed = JSON.parse(ta.value);
+      if(Array.isArray(parsed)) DATA = parsed;
+    }
+  }catch(e){ console.error('load error', e); }
+})();
+
+// ── Helpers ───────────────────────────────────────────────────
+const fmt = n => { if(n==null) return '—'; const s=(+n).toFixed(n%1?2:0); const parts=s.split('.'); parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,' '); return parts.join('.'); };
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(tab){
+  document.getElementById('tab-dashboard').classList.toggle('active', tab==='dashboard');
+  document.getElementById('tab-admin').classList.toggle('active', tab==='admin');
+  document.getElementById('btn-dash').classList.toggle('active', tab==='dashboard');
+  document.getElementById('btn-admin').classList.toggle('active', tab==='admin');
+  if(tab==='admin') renderEditorTable();
+}
+
+// ── Detect extra columns ──────────────────────────────────────
+function detectExtraCols(){
+  if(!DATA.length){ EXTRA_COLS=[]; return; }
+  EXTRA_COLS = Object.keys(DATA[0]).filter(k=>!REQUIRED.includes(k));
+}
+
+// ── Sort DATA ─────────────────────────────────────────────────
+function sortData(){
+  const MALE = ['მამრობითი','male','m','მამრ','კაცი'];
+  const gCol  = EXTRA_COLS.find(c=>['gender','სქესი','sex'].includes(c.toLowerCase())) || null;
+  const gRank = v => MALE.includes(String(v).toLowerCase().trim()) ? 0 : 1;
+  DATA.sort((a,b)=>{
+    let c = String(a.filter_1||'').localeCompare(String(b.filter_1||''),'ka'); if(c) return c;
+    c = String(a.filter_2||'').localeCompare(String(b.filter_2||''),'ka'); if(c) return c;
+    c = (+a.year||0) - (+b.year||0); if(c) return c;
+    if(gCol){ c = gRank(a[gCol]) - gRank(b[gCol]); if(c) return c; }
+    for(const col of EXTRA_COLS){
+      if(col===gCol) continue;
+      c = String(a[col]||'').localeCompare(String(b[col]||''),'ka'); if(c) return c;
+    }
+    return 0;
+  });
+}
+
+// ── Build selects ─────────────────────────────────────────────
+const naturalSort = (a, b) => String(a).localeCompare(String(b), 'ka', {numeric: true, sensitivity: 'base'});
+function getPrograms(){ return [...new Set(DATA.map(d=>d.filter_1))].sort(naturalSort); }
+function getSubs(p){ return [...new Set(DATA.filter(d=>d.filter_1===p).map(d=>d.filter_2))].sort(naturalSort); }
+function getExtraVals(col){ return [...new Set(DATA.map(d=>d[col]).filter(v=>v!=null&&v!==''))].sort(naturalSort); }
+
+function buildSelects(){
+  const ps = getPrograms();
+  const progSel = document.getElementById('prog-sel');
+  const prev = progSel.value || ps[0];
+  progSel.innerHTML = '';
+  ps.forEach(p=>{ const o=document.createElement('option'); o.value=o.textContent=p; progSel.appendChild(o); });
+  curProg = ps.includes(prev) ? prev : ps[0];
+  progSel.value = curProg;
+
+  const subs = getSubs(curProg);
+  const subSel = document.getElementById('sub-sel');
+  const prevS = subSel.value || subs[0];
+  subSel.innerHTML = '';
+  subs.forEach(s=>{ const o=document.createElement('option'); o.value=o.textContent=s; subSel.appendChild(o); });
+  curSub = subs.includes(prevS) ? prevS : subs[0];
+  subSel.value = curSub;
+
+  buildExtraFilters();
+}
+
+function buildExtraFilters(){
+  const cont = document.getElementById('extra-filters');
+  cont.innerHTML=''; cont.style.cssText='display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end';
+  EXTRA_COLS.forEach(col=>{
+    const vals = getExtraVals(col); if(!vals.length) return;
+    const wrap = document.createElement('div'); wrap.className='field';
+    const lbl = document.createElement('label'); lbl.textContent=col;
+    const sel = document.createElement('select'); sel.id='filter-'+col;
+    const all = document.createElement('option'); all.value='__all__'; all.textContent='ყველა'; sel.appendChild(all);
+    vals.forEach(v=>{ const o=document.createElement('option'); o.value=o.textContent=v; sel.appendChild(o); });
+    sel.addEventListener('change',()=>renderDashboard());
+    wrap.appendChild(lbl); wrap.appendChild(sel); cont.appendChild(wrap);
+  });
+  if(EXTRA_COLS.length>0){
+    const wrap=document.createElement('div'); wrap.className='field';
+    const lbl=document.createElement('label'); lbl.textContent='დაჯგუფება';
+    const sel=document.createElement('select'); sel.id='groupby-sel';
+    const none=document.createElement('option'); none.value=''; none.textContent='— არ დაჯგუფდეს'; sel.appendChild(none);
+    EXTRA_COLS.forEach(col=>{ const o=document.createElement('option'); o.value=col; o.textContent=col; sel.appendChild(o); });
+    sel.addEventListener('change',()=>{ curGroupBy=sel.value; renderDashboard(); });
+    wrap.appendChild(lbl); wrap.appendChild(sel); cont.appendChild(wrap);
+  }
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+function getFiltered(){
+  let rows = DATA.filter(d=>d.filter_1===curProg && d.filter_2===curSub);
+  EXTRA_COLS.forEach(col=>{
+    const sel=document.getElementById('filter-'+col);
+    if(sel && sel.value!=='__all__') rows=rows.filter(d=>String(d[col])===sel.value);
+  });
+  return rows.sort((a,b)=>a.year-b.year);
+}
+
+function renderDashboard(){
+  const rows = getFiltered();
+  const loader = document.getElementById('loader');
+  const noData = document.getElementById('no-data');
+  const legendEl = document.getElementById('chart-legend');
+  const stackToggle = document.getElementById('stack-toggle');
+
+  document.getElementById('chart-name').textContent = curSub;
+
+
+  const hasGroup = curGroupBy && curGroupBy!=='';
+  stackToggle.style.display = (hasGroup && curChartType!=='pie') ? 'flex' : 'none';
+
+  loader.classList.add('show');
+  setTimeout(()=>{
+    loader.classList.remove('show');
+    if(!rows.length){
+      noData.classList.add('show');
+      if(chart){chart.destroy();chart=null;}
+      legendEl.style.display='none';
+      renderDataTable([]);
+      return;
+    }
+    noData.classList.remove('show');
+    if(hasGroup && curChartType!=='pie') renderGroupedChart(rows);
+    else renderSimpleChart(rows);
+    renderDataTable(rows);
+  },100);
+}
+
+function setChartType(t){
+  curChartType=t;
+  ['bar','line','pie'].forEach(x=>{const el=document.getElementById('ctype-'+x);if(el){el.className='ctype-pill'+(t===x?' ac':'');}});
+  const hasGroup=curGroupBy&&curGroupBy!=='';
+  document.getElementById('stack-toggle').style.display=(hasGroup && t!=='pie')?'flex':'none';
+  const rows=getFiltered();
+  if(!rows.length) return;
+  if(hasGroup && t!=='pie') renderGroupedChart(rows); else renderSimpleChart(rows);
+  renderDataTable(rows);
+}
+
+function renderSimpleChart(rows){
+  document.getElementById('chart-legend').style.display='none';
+  const labels = rows.map(r=>r.year.toString());
+  const values = rows.map(r=>r[curMetric]);
+  const color = curMetric==='amount'?'#c8622a':'#3a6b8a';
+  const isLine = curChartType==='line';
+  const isPie  = curChartType==='pie';
+  if(chart){chart.destroy();chart=null;}
+  const chartWrap = document.getElementById('main-chart').parentElement;
+  if(isPie){
+    chartWrap.style.height = '400px';
+    const pieLabelPlugin={id:'pieLabel',afterDatasetsDraw(ch){
+      const ctx=ch.ctx;
+      ch.data.datasets.forEach((ds,di)=>{
+        ch.getDatasetMeta(di).data.forEach((arc,i)=>{
+          const v=ds.data[i]; if(!v) return;
+          const segAngle=arc.endAngle-arc.startAngle;
+          if(segAngle<0.15) return;
+          const angle=(arc.startAngle+arc.endAngle)/2;
+          const r=arc.outerRadius+20;
+          const x=arc.x+Math.cos(angle)*r;
+          const y=arc.y+Math.sin(angle)*r;
+          const txt=fmt(v);
+          ctx.save();
+          ctx.font='600 10px DM Sans,sans-serif';
+          ctx.textAlign='center';
+          ctx.textBaseline='middle';
+          // white halo behind text so it doesn't blend into segments
+          ctx.lineWidth=3;
+          ctx.strokeStyle='rgba(247,245,240,0.85)';
+          ctx.strokeText(txt,x,y);
+          ctx.fillStyle='#1a1814';
+          ctx.fillText(txt,x,y);
+          ctx.restore();
+        });
+      });
+    }};
+    chart=new Chart(document.getElementById('main-chart'),{
+      type:'pie',
+      data:{labels,datasets:[{data:values,backgroundColor:PALETTE,borderWidth:1,borderColor:'#fff'}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        animation:{duration:550},
+        layout:{padding:{top:36,left:90,right:90,bottom:20}},
+        plugins:{
+          legend:{
+            display:true,
+            position:'bottom',
+            labels:{font:{family:'DM Sans',size:12},color:'#1a1814',padding:14,boxWidth:12},
+            afterFit(box){box.height+=50;}
+          },
+          tooltip:{backgroundColor:'#fff',borderColor:'#e4e0d8',borderWidth:1,titleColor:'#9b9690',bodyColor:'#1a1814',bodyFont:{family:'DM Sans',weight:'600',size:13},padding:12,cornerRadius:8,
+            callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)}`}}
+        }
+      },
+      plugins:[pieLabelPlugin]
+    });
+    return;
+  }
+  chartWrap.style.height = '320px';
+  chart = new Chart(document.getElementById('main-chart'),{
+    type: isLine?'line':'bar',
+    data:{labels,datasets:[{
+      data:values,
+      backgroundColor: isLine ? 'transparent' : color,
+      borderColor: color, borderWidth: isLine?2.5:0,
+      borderRadius: isLine?0:5, borderSkipped:false,
+      pointBackgroundColor:'#fff', pointBorderColor:color, pointBorderWidth:2.5,
+      pointRadius: isLine?5:0, pointHoverRadius: isLine?7:0,
+      fill:false, tension:0
+    }]},
+    options: chartOpts(false,false),
+    plugins:[labelPlugin]
+  });
+}
+
+function renderGroupedChart(rows){
+  const legendEl = document.getElementById('chart-legend');
+  const groupVals = [...new Set(rows.map(r=>r[curGroupBy]))].sort();
+  const years = [...new Set(rows.map(r=>r.year))].sort();
+  const isLine = curChartType==='line';
+  const isStacked = !isLine && curMode==='stacked';
+
+  const datasets = groupVals.map((gv,i)=>{
+    const c = PALETTE[i%PALETTE.length];
+    return {
+      label:String(gv),
+      data:years.map(yr=>{ const m=rows.find(r=>r.year===yr&&String(r[curGroupBy])===String(gv)); return m?m[curMetric]:0; }),
+      backgroundColor: isLine?'transparent':c,
+      borderColor:c, borderWidth: isLine?2:0,
+      borderRadius: isLine?0:(isStacked?2:4), borderSkipped:false,
+      pointBackgroundColor:'#fff', pointBorderColor:c, pointBorderWidth:2,
+      pointRadius:isLine?4:0, pointHoverRadius:isLine?6:0,
+      fill:false, tension:0,
+      stack: isStacked?'s':undefined
+    };
+  });
+
+  if(chart){chart.destroy();chart=null;}
+  chart = new Chart(document.getElementById('main-chart'),{
+    type: isLine?'line':'bar',
+    data:{labels:years.map(String),datasets},
+    options:chartOpts(isStacked,true),
+    plugins:[labelPlugin]
+  });
+
+  legendEl.innerHTML = groupVals.map((gv,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${PALETTE[i%PALETTE.length]}"></div><span>${esc(String(gv))}</span></div>`).join('');
+  legendEl.style.display='flex';
+}
+
+function chartOpts(stacked,isMulti){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    animation:{duration:550,easing:'easeInOutCubic'},
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#fff',borderColor:'#e4e0d8',borderWidth:1,
+        titleColor:'#9b9690',bodyColor:'#1a1814',
+        bodyFont:{family:'DM Sans',weight:'600',size:13},
+        titleFont:{family:'DM Sans',size:11},
+        padding:12,cornerRadius:8,
+        mode:isMulti?'index':'nearest',intersect:false,
+        callbacks:{
+          title:ctx=>`წელი: ${ctx[0].label}`,
+          label:ctx=>`${ctx.dataset.label?ctx.dataset.label+' — ':''}${curMetric==='amount'?'თანხა':curMetric==='beneficiary count'?'ბენეფ.':'შემთხვ.'}: ${fmt(ctx.raw)}`
+        }
+      }
+    },
+    scales:{
+      x:{grid:{display:false},border:{display:false},stacked,ticks:{color:'#9b9690',font:{family:'DM Sans',size:12,weight:'500'}}},
+      y:{grid:{display:false},border:{display:false},stacked,ticks:{display:false}}
+    },
+    layout:{padding:{top:28}}
+  };
+}
+
+const labelPlugin = {
+  id:'lbl',
+  afterDatasetsDraw(ch){
+    if(ch.config.type==='pie') return;
+    const isLine = ch.config.type==='line';
+    const ctx=ch.ctx;
+    ch.data.datasets.forEach((ds,i)=>{
+      const meta=ch.getDatasetMeta(i);
+      meta.data.forEach((point,idx)=>{
+        const v=ds.data[idx]; if(!v) return;
+        ctx.save();
+        ctx.fillStyle='#9b9690'; ctx.font='500 11px DM Sans,sans-serif';
+        ctx.textAlign='center';
+        if(isLine){
+          // determine slope: compare with neighbors to find if peak points up or down
+          const prev=meta.data[idx-1], next=meta.data[idx+1];
+          const yPrev=prev?prev.y:point.y, yNext=next?next.y:point.y;
+          // if both neighbors are below (or point is a local min) → label below
+          const isLocalMin=point.y>yPrev && point.y>yNext;
+          if(isLocalMin){
+            ctx.textBaseline='top';
+            ctx.fillText(fmt(v),point.x,point.y+7);
+          } else {
+            ctx.textBaseline='bottom';
+            ctx.fillText(fmt(v),point.x,point.y-7);
+          }
+        } else {
+          ctx.textBaseline='bottom';
+          ctx.fillText(fmt(v),point.x,point.y-5);
+        }
+        ctx.restore();
+      });
+    });
+  }
+};
+
+// ── Data table below chart ─────────────────────────────────────
+function renderDataTable(rows){
+  document.getElementById('table-sub-label').textContent = rows.length?curSub:'—';
+  const head=document.getElementById('dt-head');
+  const body=document.getElementById('dt-body');
+  const foot=document.getElementById('dt-foot');
+
+  if(!rows.length){
+    head.innerHTML=''; body.innerHTML='<tr><td colspan="20" style="text-align:center;padding:24px;color:var(--muted)">მონაცემები ვერ მოიძებნა</td></tr>'; foot.innerHTML=''; return;
+  }
+
+  const extraV = EXTRA_COLS.filter(col=>rows.some(r=>r[col]!=null&&r[col]!==''));
+  const years  = [...new Set(rows.map(r=>r.year))].sort();
+
+  if(extraV.length===0){
+    head.innerHTML=`<tr><th style="min-width:110px">ველი</th>${years.map(y=>`<th class="num">${y}</th>`).join('')}</tr>`;
+    const metricLabel={'request count':'შემთხვევათა რაოდენობა','beneficiary count':'ბენეფიციარი პირები','amount':'თანხა'}[curMetric]||curMetric;
+    body.innerHTML=`<tr><td style="font-weight:600">${metricLabel}</td>${years.map(yr=>{const r=rows.find(d=>d.year===yr);return`<td class="num">${r&&r[curMetric]!=null?fmt(r[curMetric]):'—'}</td>`;}).join('')}</tr>`;
+    foot.innerHTML='';
+  } else {
+    const gCol = extraV[0];
+    const gVals = [...new Set(rows.map(r=>r[gCol]).filter(v=>v!=null&&v!==''))].sort();
+    const span  = gVals.length;
+    const lk = {}; rows.forEach(r=>{ lk[`${r.year}__${r[gCol]}`]=r; });
+
+    head.innerHTML=`<tr><th rowspan="2" style="vertical-align:middle;min-width:110px">ველი</th>${years.map(y=>`<th colspan="${span}" style="text-align:center;border-left:2px solid var(--border)">${y}</th>`).join('')}</tr><tr>${years.map(()=>gVals.map((gv,gi)=>`<th class="num" style="${gi===0?'border-left:2px solid var(--border)':''}">${esc(String(gv))}</th>`).join('')).join('')}</tr>`;
+    const gMetricLabel={'request count':'შემთხვევათა რაოდენობა','beneficiary count':'ბენეფიციარი პირები','amount':'თანხა'}[curMetric]||curMetric;
+    body.innerHTML=`<tr><td style="font-weight:600">${gMetricLabel}</td>${years.map(yr=>gVals.map((gv,gi)=>{const r=lk[`${yr}__${gv}`];return`<td class="num" style="${gi===0?'border-left:2px solid var(--border)':''}">` +(r&&r[curMetric]!=null&&r[curMetric]!==''?fmt(r[curMetric]):'—')+'</td>';}).join('')).join('')}</tr>`;
+    foot.innerHTML='';
+  }
+}
+
+// ── Editor table ──────────────────────────────────────────────
+function renderEditorTable(){
+  const q=(document.getElementById('ed-search').value||'').toLowerCase();
+  const rows=q?DATA.filter(d=>Object.values(d).some(v=>String(v).toLowerCase().includes(q))):DATA;
+  document.getElementById('ed-count').textContent=`${rows.length} / ${DATA.length} ჩანაწერი`;
+  const allCols=DATA.length?Object.keys(DATA[0]):REQUIRED;
+
+  document.getElementById('ed-thead').innerHTML=`<tr>${allCols.map(c=>{
+    const isReq=REQUIRED.includes(c);
+    return `<th>${esc(c)}${isReq?'':` <button onclick="deleteColumn('${esc(c)}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0 2px;border-radius:3px;line-height:1;vertical-align:middle" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>`}</th>`;
+  }).join('')}<th></th></tr>`;
+
+  document.getElementById('ed-tbody').innerHTML=rows.map(r=>{
+    const ri=DATA.indexOf(r);
+    return `<tr data-ri="${ri}">${allCols.map((col,ci)=>{
+      const isNum=NUM_COLS.includes(col);
+      return `<td><input class="cell-in${isNum?' num':''}" ${isNum?'type="number"':''} value="${esc(r[col]??'')}" data-ri="${ri}" data-ci="${ci}" onchange="updateCell(this)"></td>`;
+    }).join('')}<td><button class="btn-del" onclick="deleteRow(${ri})">✕</button></td></tr>`;
+  }).join('');
+
+  buildAddRowFields(allCols);
+}
+
+function buildAddRowFields(cols){
+  const cont=document.getElementById('add-row-fields');
+  cont.innerHTML=cols.map(col=>{
+    const isNum=NUM_COLS.includes(col);
+    return `<div class="add-f"><label>${esc(col)}</label><input id="new-${col}" ${isNum?'type="number"':''} placeholder="${esc(col)}" style="width:${isNum?'90px':'150px'}"></div>`;
+  }).join('');
+}
+
+function toggleAddRow(){
+  const panel=document.getElementById('add-row-panel');
+  const isOpen=panel.classList.contains('show');
+  if(isOpen){ panel.classList.remove('show'); }
+  else { panel.classList.add('show'); buildAddRowFields(DATA.length?Object.keys(DATA[0]):REQUIRED); }
+}
+
+function confirmAddRow(){
+  const cols=DATA.length?Object.keys(DATA[0]):REQUIRED;
+  const row={}; let valid=true;
+  cols.forEach(col=>{
+    const el=document.getElementById('new-'+col); if(!el) return;
+    const v=el.value.trim();
+    if(!v&&REQUIRED.includes(col)){valid=false;el.style.borderColor='var(--red)';return;}
+    el.style.borderColor='';
+    row[col]=(isNaN(v)||v==='')?v:+v;
+  });
+  if(!valid){toast('⚠ შეავსე სავალდებულო ველები');return;}
+  DATA.push(row); sortData();
+  document.getElementById('add-row-panel').classList.remove('show');
+  renderEditorTable(); syncDash();
+  toast('✓ სტრიქონი დაემატა');
+}
+
+function deleteRow(idx){
+  if(!confirm('ნამდვილად გსურს ამ სტრიქონის წაშლა?')) return;
+  DATA.splice(idx,1); renderEditorTable(); syncDash();
+  toast('სტრიქონი წაიშალა');
+}
+
+function addColumnUI(){
+  const name=prompt('ახალი სვეტის სახელი (მაგ: gender, age_group):');
+  if(!name||!name.trim()) return;
+  const col=name.trim();
+  if(REQUIRED.includes(col)){toast('⚠ ეს სახელი რეზერვირებულია');return;}
+  if(DATA.length&&Object.keys(DATA[0]).includes(col)){toast('⚠ ასეთი სვეტი უკვე არსებობს');return;}
+  DATA.forEach(r=>{r[col]='';});
+  detectExtraCols(); renderEditorTable(); buildExtraFilters();
+  toast(`✓ სვეტი "${col}" დაემატა`);
+}
+
+function deleteColumn(col){
+  if(REQUIRED.includes(col)){toast('⚠ სავალდებულო სვეტის წაშლა შეუძლებელია');return;}
+  if(!confirm(`სვეტი "${col}" წაიშლება. გავაგრძელო?`)) return;
+  DATA.forEach(r=>{delete r[col];});
+  if(curGroupBy===col) curGroupBy='';
+  detectExtraCols(); renderEditorTable(); buildExtraFilters(); renderDashboard();
+  toast(`სვეტი "${col}" წაიშალა`);
+}
+
+function clearAllData(){
+  if(!confirm('ყველა მონაცემი წაიშლება. დარწმუნებული ხარ?')) return;
+  DATA.length=0; detectExtraCols(); buildSelects(); renderEditorTable();
+  if(chart){chart.destroy();chart=null;}
+  ['dt-head','dt-body','dt-foot'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});
+  document.getElementById('table-sub-label').textContent='—';
+  toast('მონაცემები გასუფთავდა');
+}
+
+function syncDash(){
+  detectExtraCols(); sortData(); buildSelects(); renderDashboard();
+}
+
+function updateCell(input){
+  const ri = +input.dataset.ri;
+  const ci = +input.dataset.ci;
+  const allCols = DATA.length ? Object.keys(DATA[0]) : REQUIRED;
+  const col = allCols[ci];
+  const isNum = NUM_COLS.includes(col);
+  DATA[ri][col] = (isNum && input.value !== '') ? +input.value : input.value;
+  syncDash();
+}
+
+// ── Save / Export ─────────────────────────────────────────────
+function getExportHTML(includeAdmin){
+  // Read the original source HTML from the page's own script tag
+  // Strategy: clone the document, inject DATA, serialize cleanly
+  const clone = document.documentElement.cloneNode(true);
+
+  // Find data-store textarea in clone and set its value
+  const ta = clone.querySelector('#data-store');
+  if(ta) ta.textContent = JSON.stringify(DATA);
+
+  if(!includeAdmin){
+    // Remove admin button
+    const adminBtn = clone.querySelector('#btn-admin');
+    if(adminBtn){
+      // remove the whole <!--ADMIN_BTN--> comment block by removing the button
+      adminBtn.remove();
+    }
+    // Remove admin section
+    const adminSection = clone.querySelector('#tab-admin');
+    if(adminSection) adminSection.remove();
+  }
+
+  return '<!DOCTYPE html>\n' + clone.outerHTML;
+}
+
+function download(html, filename){
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function saveHTML(){ download(getExportHTML(true), 'Charts_admin_Final.html'); toast('✓ შენახულია — Charts_admin_Final.html'); }
+function exportPublicHTML(){ download(getExportHTML(false), 'statistics_export.html'); toast('✓ ექსპორტი — statistics_export.html'); }
+
+// ── Import ────────────────────────────────────────────────────
+function handleImport(input){
+  const file=input.files[0]; if(!file) return; input.value='';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let rows;
+      if(file.name.endsWith('.csv')){
+        rows=parseCSV(e.target.result);
+      } else {
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      }
+      if(!rows.length){toast('⚠ ფაილი ცარიელია');return;}
+      pendingRaw=rows; pendingCols=Object.keys(rows[0]);
+      const fileCols=pendingCols.map(c=>c.toLowerCase());
+      const missing=REQUIRED.filter(r=>!fileCols.includes(r));
+      if(missing.length===0) applyDirectImport(); else showMapping();
+    }catch(err){toast('⚠ შეცდომა: '+err.message);}
+  };
+  if(file.name.endsWith('.csv')) reader.readAsText(file,'UTF-8'); else reader.readAsArrayBuffer(file);
+}
+
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+    const obj={}; headers.forEach((h,i)=>obj[h]=vals[i]??''); return obj;
+  });
+}
+
+function applyDirectImport(){
+  DATA = pendingRaw.map(r=>{
+    const row={};
+    Object.keys(r).forEach(k=>{
+      const lk=k.toLowerCase();
+      const mapped=REQUIRED.includes(lk)?lk:k;
+      row[mapped]=(NUM_COLS.includes(mapped)&&r[k]!=='')?+r[k]:r[k];
+    });
+    return row;
+  });
+  finishImport();
+}
+
+function showMapping(){
+  const card=document.getElementById('mapping-card'); card.classList.add('show');
+  document.getElementById('mapping-grid').innerHTML=REQUIRED.map(req=>`
+    <div class="map-field"><label>${req}</label>
+    <select id="map-${req}">
+      <option value="">— აირჩიე —</option>
+      ${pendingCols.map(c=>`<option value="${esc(c)}" ${c.toLowerCase()===req?'selected':''}>${esc(c)}</option>`).join('')}
+    </select></div>`).join('');
+}
+
+function applyMapping(){
+  const mapping={}; let ok=true;
+  REQUIRED.forEach(req=>{
+    const sel=document.getElementById('map-'+req);
+    if(!sel.value){toast(`⚠ "${req}" არ არის მითითებული`);ok=false;} else mapping[req]=sel.value;
+  });
+  if(!ok) return;
+  DATA=pendingRaw.map(r=>{
+    const row={};
+    REQUIRED.forEach(req=>{ const v=r[mapping[req]]??''; row[req]=(NUM_COLS.includes(req)&&v!=='')?+v:v; });
+    Object.keys(r).forEach(k=>{ if(!Object.values(mapping).includes(k)) row[k]=r[k]; });
+    return row;
+  });
+  document.getElementById('mapping-card').classList.remove('show');
+  finishImport();
+}
+
+function finishImport(){
+  detectExtraCols(); sortData(); buildSelects(); renderDashboard(); switchTab('dashboard'); renderEditorTable();
+  toast(`✓ ${DATA.length} სტრიქონი შემოტანილია`);
+  switchTab('admin');
+}
+
+// ── Events ────────────────────────────────────────────────────
+document.getElementById('prog-sel').addEventListener('change',e=>{
+  curProg=e.target.value;
+  const subs=getSubs(curProg); const subSel=document.getElementById('sub-sel');
+  subSel.innerHTML=''; subs.forEach(s=>{const o=document.createElement('option');o.value=o.textContent=s;subSel.appendChild(o)});
+  curSub=subs[0]; subSel.value=curSub; renderDashboard();
+});
+document.getElementById('sub-sel').addEventListener('change',e=>{curSub=e.target.value;renderDashboard();});
+document.querySelectorAll('.pill[data-m]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    curMetric=btn.dataset.m;
+    document.querySelectorAll('.pill[data-m]').forEach(b=>b.className='pill');
+    btn.classList.add(curMetric==='amount'?'aa':'ac');
+    renderDashboard();
+  });
+});
+document.querySelectorAll('.mode-btn[data-mode]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    curMode=btn.dataset.mode;
+    document.querySelectorAll('.mode-btn[data-mode]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); renderDashboard();
+  });
+});
+document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveHTML();} });
+
+// ── Init ──────────────────────────────────────────────────────
+detectExtraCols(); sortData(); buildSelects(); renderDashboard(); switchTab('dashboard'); switchTab('dashboard');
+</script>
+
+</body></html>
