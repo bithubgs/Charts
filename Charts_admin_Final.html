@@ -120,14 +120,14 @@
     .search-wrap input::placeholder{color:var(--muted)}
     .ed-scroll{overflow-x:auto}
     .ed-table{width:100%;border-collapse:collapse;font-size:13px}
-    .ed-table thead th{padding:8px 10px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    .ed-table thead th{padding:8px 10px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);white-space:nowrap}
     .ed-table tbody tr{border-bottom:1px solid var(--border)}
     .ed-table tbody tr:last-child{border-bottom:none}
     .ed-table tbody tr:hover{background:#faf9f6}
     .ed-table tbody td{padding:4px 6px;vertical-align:middle}
     .cell-in{border:1px solid transparent;background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);width:100%;padding:5px 7px;border-radius:5px;outline:none;transition:all .15s;min-width:80px}
     .cell-in:focus{background:var(--white);border-color:var(--blue);box-shadow:0 0 0 2px rgba(58,107,138,.12)}
-    .cell-in.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+    .cell-in.num{text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
     .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:999}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -178,8 +178,8 @@
     <div class="dash-main">
 
     <div class="info-card" style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px">
-      <p style="text-indent: 20px; font-size:13px;line-height:1.7;color:#3a3830">ჯანდაცვისა და სოციალური მომსახურების საქალაქო სამსახური წლების განმავლობაში ახორციელებს ჯანმრთელობის დაცვისა და სოციალური უზრუნველყოფის მუნიციპალურ პროგრამებს. 2025 წელს სამსახური ადმინისტრირებას უწევდა 30 პროგრამას, რომელთაგან 9 ჯანმრთელობის დაცვის, ხოლო 21 სოციალური უზრუნველყოფის პროგრამაა.</p>
-      <p style="text-indent: 20px; font-size:13px;line-height:1.7;color:#3a3830">მოცემულ გვერდზე შეგიძლიათ იხილოთ სამსახურის მიერ ადმინისტრირებადი პროგრამებისა და ქვეპროგრამების შესახებ ძირითადი სტატისტიკური მაჩვენებელი წლების მიხედვით.</p>
+      <p style="text-indent: 20px; font-size:14px;line-height:1.7;color:#3a3830">ჯანდაცვისა და სოციალური მომსახურების საქალაქო სამსახური წლების განმავლობაში ახორციელებს ჯანმრთელობის დაცვისა და სოციალური უზრუნველყოფის მუნიციპალურ პროგრამებს. 2025 წელს სამსახური ადმინისტრირებას უწევდა 30 პროგრამას, რომელთაგან 9 ჯანმრთელობის დაცვის, ხოლო 21 სოციალური უზრუნველყოფის პროგრამაა.</p>
+      <p style="text-indent: 20px; font-size:14px;line-height:1.7;color:#3a3830">მოცემულ გვერდზე შეგიძლიათ იხილოთ სამსახურის მიერ ადმინისტრირებადი პროგრამებისა და ქვეპროგრამების შესახებ ძირითადი სტატისტიკური მაჩვენებელი წლების მიხედვით.</p>
     </div>
 
     <div class="controls-card">
@@ -650,7 +650,10 @@ function chartOpts(stacked,isMulti,isLine){
       }
     },
     scales:{
-      x:{grid:{display:false},border:{display:false},stacked,ticks:{color:'#000000',font:{family:'DM Sans',size:12,weight:'500'}}},
+      x:{grid:{display:false},border:{display:false},stacked,offset:true,
+      categoryPercentage:0.8, barPercentage:0.9,
+      ticks:{color:'#000000',font:{family:'DM Sans',size:14,weight:'800'},padding:20}},
+
       y:{grid:{display:false},border:{display:false},stacked,ticks:{display:false}}
     },
     layout:{padding:{top:28}}
@@ -667,7 +670,7 @@ function startLineReveal(ch) {
     const p = Math.min(elapsed / duration, 1);
     //ალტერნატიული სიჩქარე
     // speed - სიჩქარის კოეფიციენტი (მაგალითად: 1 არის ნორმალური, 2 - ორჯერ სწრაფი)
-    let speed = 2.0; 
+    let speed = 2.5; 
 
     // p არის დროის ან კადრების პროგრესი (0-დან 1-მდე)
     ch._revealProgress = Math.min(p * speed, 1);
