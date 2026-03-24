@@ -955,33 +955,27 @@ const labelPlugin = {
 
         if(isLine){
           const prev=meta.data[idx-1], next=meta.data[idx+1];
-          const yPrev=prev?prev.y:point.y, yNext=next?next.y:point.y;
+          const isLocalMin = prev && next && point.y > prev.y && point.y > next.y;
 
-          // Calculate angle at this point using neighbors
-          const dx = (next?next.x:point.x) - (prev?prev.x:point.x);
-          const dy = (next?next.y:point.y) - (prev?prev.y:point.y);
-          // angle in degrees (0=horizontal, 90=steep up/down)
-          const angleDeg = Math.abs(Math.atan2(Math.abs(dy), Math.abs(dx)) * 180 / Math.PI);
-
-          const isLocalMin = point.y > yPrev && point.y > yNext;
-          const isLocalMax = point.y < yPrev && point.y < yNext;
-
-          // If angle < 100° (sharp peak) AND it's a local max/min → place at tip
-          if(angleDeg < 100 && (isLocalMax || isLocalMin)){
-            if(isLocalMin){
-              // valley: label below the point
-              tx = point.x; ty = point.y + 16; baseline = 'top';
-            } else {
-              // peak: label above the point
-              tx = point.x; ty = point.y - 16; baseline = 'bottom';
-            }
-          } else {
-            // normal: label above or below based on local min
-            if(isLocalMin){
+          if(isLocalMin){
+            // Valley: check angle in DATA space (not pixel space)
+            const vPrev = ds.data[idx-1], vNext = ds.data[idx+1], vCur = ds.data[idx];
+            // Normalize: use chart Y scale range to get comparable units
+            const yScale = ch.scales[ch.data.datasets[i].yAxisID || 'y1'] || ch.scales['y1'] || ch.scales['y'];
+            const yRange = yScale ? (yScale.max - yScale.min) : 1;
+            const xRange = ch.data.labels.length - 1 || 1;
+            // Slopes on each side (in normalized units)
+            const slopeLeft  = Math.abs(((vCur - vPrev) / yRange) / (1 / xRange));
+            const slopeRight = Math.abs(((vNext - vCur) / yRange) / (1 / xRange));
+            // If both slopes are steep (sharp V) → label below
+            const isSharpValley = slopeLeft > 0.15 || slopeRight > 0.15;
+            if(isSharpValley){
               tx = point.x; ty = point.y + 14; baseline = 'top';
             } else {
               tx = point.x; ty = point.y - 14; baseline = 'bottom';
             }
+          } else {
+            tx = point.x; ty = point.y - 14; baseline = 'bottom';
           }
         } else {
           tx = point.x; ty = point.y - 5; baseline = 'bottom';
