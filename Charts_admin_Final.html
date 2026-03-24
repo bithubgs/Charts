@@ -969,33 +969,27 @@ const labelPlugin = {
 
         if(isLine){
           const prev=meta.data[idx-1], next=meta.data[idx+1];
-          const yPrev=prev?prev.y:point.y, yNext=next?next.y:point.y;
+          const isLocalMin = prev && next && point.y > prev.y && point.y > next.y;
 
-          // Calculate angle at this point using neighbors
-          const dx = (next?next.x:point.x) - (prev?prev.x:point.x);
-          const dy = (next?next.y:point.y) - (prev?prev.y:point.y);
-          // angle in degrees (0=horizontal, 90=steep up/down)
-          const angleDeg = Math.abs(Math.atan2(Math.abs(dy), Math.abs(dx)) * 180 / Math.PI);
-
-          const isLocalMin = point.y > yPrev && point.y > yNext;
-          const isLocalMax = point.y < yPrev && point.y < yNext;
-
-          // If angle < 100° (sharp peak) AND it's a local max/min → place at tip
-          if(angleDeg < 100 && (isLocalMax || isLocalMin)){
-            if(isLocalMin){
-              // valley: label below the point
-              tx = point.x; ty = point.y + 16; baseline = 'top';
-            } else {
-              // peak: label above the point
-              tx = point.x; ty = point.y - 16; baseline = 'bottom';
-            }
-          } else {
-            // normal: label above or below based on local min
-            if(isLocalMin){
+          if(isLocalMin){
+            // Valley: check angle in DATA space (not pixel space)
+            const vPrev = ds.data[idx-1], vNext = ds.data[idx+1], vCur = ds.data[idx];
+            // Normalize: use chart Y scale range to get comparable units
+            const yScale = ch.scales[ch.data.datasets[i].yAxisID || 'y1'] || ch.scales['y1'] || ch.scales['y'];
+            const yRange = yScale ? (yScale.max - yScale.min) : 1;
+            const xRange = ch.data.labels.length - 1 || 1;
+            // Slopes on each side (in normalized units)
+            const slopeLeft  = Math.abs(((vCur - vPrev) / yRange) / (1 / xRange));
+            const slopeRight = Math.abs(((vNext - vCur) / yRange) / (1 / xRange));
+            // If both slopes are steep (sharp V) → label below
+            const isSharpValley = slopeLeft > 0.15 || slopeRight > 0.15;
+            if(isSharpValley){
               tx = point.x; ty = point.y + 14; baseline = 'top';
             } else {
               tx = point.x; ty = point.y - 14; baseline = 'bottom';
             }
+          } else {
+            tx = point.x; ty = point.y - 14; baseline = 'bottom';
           }
         } else {
           tx = point.x; ty = point.y - 5; baseline = 'bottom';
@@ -1882,8 +1876,8 @@ function updateMetricButtons(filteredData) {
         <option value="3">0.000</option>
       </select>
       <select class="mcfg-type" id="mcfg-yaxis-1" title="Y ღერძი">
-        <option value="y1">Y1 (მარცხ.)</option>
-        <option value="y2" selected="">Y2 (მარჯვ.)</option>
+        <option value="y1" selected="">Y1 (მარცხ.)</option>
+        <option value="y2">Y2 (მარჯვ.)</option>
       </select>
       <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);min-width:auto">
         <input type="checkbox" id="mcfg-vis-1" checked="">
@@ -1901,7 +1895,7 @@ function updateMetricButtons(filteredData) {
       </select>
       <input type="color" id="mcfg-color-2" value="#3a7a5a" title="ფერი" style="width:36px;height:28px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
       <select class="mcfg-type" id="mcfg-sel-2" title="ჯგუფი">
-        <option value="1">1 ჯგ.</option><option value="2" selected="">2 ჯგ.</option><option value="3">3 ჯგ.</option><option value="4">4 ჯგ.</option><option value="5">5 ჯგ.</option>
+        <option value="1" selected="">1 ჯგ.</option><option value="2">2 ჯგ.</option><option value="3">3 ჯგ.</option><option value="4">4 ჯგ.</option><option value="5">5 ჯგ.</option>
       </select>
       <select class="mcfg-type" id="mcfg-ctype-2" title="დიაგრამის ტიპი">
         <option value="auto" selected="">🔄 ავტო</option>
@@ -1909,8 +1903,8 @@ function updateMetricButtons(filteredData) {
         <option value="line">∿ ხაზი</option>
       </select>
       <select class="mcfg-type" id="mcfg-dec-2" title="წერტილის შემდეგ ციფრები">
-        <option value="0">0 ციფრი</option>
-        <option value="1" selected="">0.0</option>
+        <option value="0" selected="">0 ციფრი</option>
+        <option value="1">0.0</option>
         <option value="2">0.00</option>
         <option value="3">0.000</option>
       </select>
@@ -1934,7 +1928,7 @@ function updateMetricButtons(filteredData) {
       </select>
       <input type="color" id="mcfg-color-3" value="#c8622a" title="ფერი" style="width:36px;height:28px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
       <select class="mcfg-type" id="mcfg-sel-3" title="ჯგუფი">
-        <option value="1">1 ჯგ.</option><option value="2" selected="">2 ჯგ.</option><option value="3">3 ჯგ.</option><option value="4">4 ჯგ.</option><option value="5">5 ჯგ.</option>
+        <option value="1" selected="">1 ჯგ.</option><option value="2">2 ჯგ.</option><option value="3">3 ჯგ.</option><option value="4">4 ჯგ.</option><option value="5">5 ჯგ.</option>
       </select>
       <select class="mcfg-type" id="mcfg-ctype-3" title="დიაგრამის ტიპი">
         <option value="auto" selected="">🔄 ავტო</option>
@@ -1942,8 +1936,8 @@ function updateMetricButtons(filteredData) {
         <option value="line">∿ ხაზი</option>
       </select>
       <select class="mcfg-type" id="mcfg-dec-3" title="წერტილის შემდეგ ციფრები">
-        <option value="0">0 ციფრი</option>
-        <option value="1" selected="">0.0</option>
+        <option value="0" selected="">0 ციფრი</option>
+        <option value="1">0.0</option>
         <option value="2">0.00</option>
         <option value="3">0.000</option>
       </select>
@@ -1967,7 +1961,7 @@ function updateMetricButtons(filteredData) {
       </select>
       <input type="color" id="mcfg-color-4" value="#888888" title="ფერი" style="width:36px;height:28px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
       <select class="mcfg-type" id="mcfg-sel-4" title="ჯგუფი">
-        <option value="1">1 ჯგ.</option><option value="2" selected="">2 ჯგ.</option><option value="3">3 ჯგ.</option><option value="4">4 ჯგ.</option><option value="5">5 ჯგ.</option>
+        <option value="1" selected="">1 ჯგ.</option><option value="2">2 ჯგ.</option><option value="3">3 ჯგ.</option><option value="4">4 ჯგ.</option><option value="5">5 ჯგ.</option>
       </select>
       <select class="mcfg-type" id="mcfg-ctype-4" title="დიაგრამის ტიპი">
         <option value="auto" selected="">🔄 ავტო</option>
@@ -1975,14 +1969,14 @@ function updateMetricButtons(filteredData) {
         <option value="line">∿ ხაზი</option>
       </select>
       <select class="mcfg-type" id="mcfg-dec-4" title="წერტილის შემდეგ ციფრები">
-        <option value="0">0 ციფრი</option>
-        <option value="1" selected="">0.0</option>
+        <option value="0" selected="">0 ციფრი</option>
+        <option value="1">0.0</option>
         <option value="2">0.00</option>
         <option value="3">0.000</option>
       </select>
       <select class="mcfg-type" id="mcfg-yaxis-4" title="Y ღერძი">
-        <option value="y1">Y1 (მარცხ.)</option>
-        <option value="y2" selected="">Y2 (მარჯვ.)</option>
+        <option value="y1" selected="">Y1 (მარცხ.)</option>
+        <option value="y2">Y2 (მარჯვ.)</option>
       </select>
       <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);min-width:auto">
         <input type="checkbox" id="mcfg-vis-4" checked="">
