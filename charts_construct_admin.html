@@ -1670,7 +1670,7 @@ function rebuildDashboardPills(){
   cont.innerHTML = METRIC_CONFIG.map(m=> {
     // type toggle icon (only if showPillTypeToggle is on)
     const ct = m.chartType || 'bar';
-    const icon = ct === 'line' ? '∿' : '▬';
+    const icon = ct === 'line' ? '📈' : '📊';
     const toggleBtn = showPillTypeToggle
       ? `<span class="pill-type-toggle" data-m="${m.key}" title="ტიპის გადართვა">${icon}</span>`
       : '';
@@ -1718,7 +1718,7 @@ function rebuildDashboardPills(){
       // cycle: auto→bar→line→bar→line...
       const cur = cfg.chartType || 'bar';
       cfg.chartType = (cur === 'line') ? 'bar' : 'line';
-      btn.textContent = cfg.chartType === 'line' ? '∿' : '▬';
+      btn.textContent = cfg.chartType === 'line' ? '📈' : '📊';
       // auto-activate this metric if not already active
       if(!activeMetrics.has(key)){
         const grp = cfg?.group || 1;
@@ -1772,7 +1772,7 @@ function updatePillStyles(cont){
     const tog = wrap?.querySelector('.pill-type-toggle');
     if(tog && cfg){
       const ct = cfg.chartType || 'bar';
-      tog.textContent = ct === 'line' ? '∿' : '▬';
+      tog.textContent = ct === 'line' ? '📈' : '📊';
       tog.classList.toggle('pill-type-line', ct === 'line');
     }
   });
