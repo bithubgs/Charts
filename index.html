@@ -271,7 +271,7 @@
         </div>
       </div>
       <div class="chart-wrap" style="height: 320px;">
-        <canvas id="main-chart" style="box-sizing: border-box; display: block; height: 0px; width: 0px;" width="0" height="0"></canvas>
+        <canvas id="main-chart" style="box-sizing: border-box; display: block; height: 320px; width: 1116px;" width="1116" height="320"></canvas>
         <div class="no-data" id="no-data"><div style="font-size:28px;opacity:.4">🔍</div><span>მონაცემები ვერ მოიძებნა</span></div>
       </div>
       <div id="chart-legend" class="chart-legend" style="justify-content: center; display: none;"><div class="legend-item"><div class="legend-dot" style="background:#aa4646"></div><span>ბენეფიციარი</span></div><div class="legend-item"><div class="legend-dot" style="background:#326496"></div><span>შემთხვევა</span></div></div>
@@ -301,7 +301,7 @@
   
 
 
-<div class="toast" id="toast">✓ შენახულია — charts_construct_admin.html</div>
+<div class="toast" id="toast">✓ 276 სტრიქონი შემოტანილია</div>
 
 
 <script>
@@ -1443,8 +1443,14 @@ function exportExcel(){
   // სათაურების სტრიქონი
   const header = cols.map(c => HEADERS[c] || c);
 
-  // მონაცემთა სტრიქონები
-  const rows = DATA.map(r => cols.map(c => r[c] ?? ''));
+  // მონაცემთა სტრიქონები — რიცხვური სვეტები Number-ად
+  const rows = DATA.map(r => cols.map(c => {
+    const v = r[c] ?? '';
+    if(v === '' || v == null) return '';
+    if(c === 'year') return String(v);
+    const n = parseFloat(String(v).replace(/[\s,]/g,''));
+    return (!isNaN(n) && isNumCol(c)) ? n : v;
+  }));
 
   // XLSX worksheet-ის შექმნა
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
@@ -1480,7 +1486,12 @@ function exportExcel(){
     for(let c = range.s.c; c <= range.e.c; c++){
       const addr = XLSX.utils.encode_cell({r,c});
       if(!ws[addr]) ws[addr]={t:'z',v:''};
-      const isText = ['program','subprogram'].includes(cols[c]);
+      const isText = ['program','subprogram','year'].includes(cols[c]);
+      // რიცხვური უჯრის ტიპი გამოვასწოროთ
+      if(!isText && ws[addr].t === 's'){
+        const n = parseFloat(ws[addr].v);
+        if(!isNaN(n)){ ws[addr].t = 'n'; ws[addr].v = n; }
+      }
       ws[addr].s = bodyStyle(isText, isOdd);
     }
   }
