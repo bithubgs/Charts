@@ -3,9 +3,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>წლიური სტატისტიკური მონაცემები</title>
-      <div style="font-size:24px;font-weight:900;color:#2564B0;letter-spacing:.03em;margin-bottom:10px">ჯანდაცვისა და სოციალური მომსახურების საქალაქო სამსახური</div>
-      <div style="font-size:20px;font-weight:300;color:#2564B0;letter-spacing:.03em;margin-bottom:6px">ძირითადი სტატისტიკური მაჩვენებლები ჯანმრთელობის დაცვისა და სოციალური მომსახურების პროგრამების შესახებ</div>
-      
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&amp;family=DM+Serif+Display:ital@0;1&amp;display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -221,6 +218,11 @@
 <textarea id="mcfg-store" style="display:none">{"metrics":[{"key":"შემთხვევა","label":"შემთხვევა","color":"#326496","type":"count","visible":true,"group":1,"chartType":"bar","decimals":0,"yAxis":"y1"},{"key":"ბენეფიციარი","label":"ბენეფიციარი","color":"#aa4646","type":"count","visible":true,"group":1,"chartType":"bar","decimals":0,"yAxis":"y1"},{"key":"ბიუჯეტი (1000 ლარი)","label":"ბიუჯეტი (1000 ლარი)","color":"#326e5a","type":"amount","visible":true,"group":2,"chartType":"bar","decimals":1,"yAxis":"y1"},{"key":"ბიუჯეტის ხარჯი (1000 ლარი)","label":"ბიუჯეტის ხარჯი (1000 ლარი)","color":"#c86432","type":"amount","visible":true,"group":2,"chartType":"bar","decimals":1,"yAxis":"y1"},{"key":"შესრულების პროცენტი","label":"შესრულების პროცენტი","color":"#8cbe64","type":"pct","visible":true,"group":2,"chartType":"line","decimals":1,"yAxis":"y2"}],"required":["program","subprogram","year","ბენეფიციარი","შემთხვევა","ბიუჯეტი (1000 ლარი)","ბიუჯეტის ხარჯი (1000 ლარი)","შესრულების პროცენტი"],"showPillTypeToggle":true,"theme":"default","roleLabels":{"program":"პროგრამა","subprogram":"ქვეპროგრამა","year":"წელი"}}</textarea>
 <div class="topbar">
   <div class="brand">წლიური სტატისტიკური მონაცემები</div>
+    <div class="page-title">
+      <div style="font-size:24px;font-weight:900;color:#2564B0;letter-spacing:.03em;margin-bottom:10px">ჯანდაცვისა და სოციალური მომსახურების საქალაქო სამსახური</div>
+      <div style="font-size:20px;font-weight:300;color:#2564B0;letter-spacing:.03em;margin-bottom:6px">ძირითადი სტატისტიკური მაჩვენებლები ჯანმრთელობის დაცვისა და სოციალური მომსახურების პროგრამების შესახებ</div>
+    </div>
+  
   <div class="topbar-right">
     <select id="theme-sel" onchange="applyTheme(this.value)" title="დიზაინის თემა" style="font-size:12px;padding:5px 26px 5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;outline:none;appearance:none;background-image:url(" data:image="" svg+xml,%3csvg="" xmlns="http://www.w3.org/2000/svg" width="10" height="6" %3e%3cpath="" d="M1 1l4 4 4-4" stroke="%239b9690" stroke-width="1.5" fill="none" stroke-linecap="round" %3e%3c="" svg%3e");background-repeat:no-repeat;background-position:right="" 7px="" center"="">
       <option value="default">☀️ კლასიკური</option>
